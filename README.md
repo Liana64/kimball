@@ -50,8 +50,46 @@ Internet ─8443─> AT&T gateway (IP passthrough) ─8443─> this box
 
 1. Download the **minimal ISO** from https://nixos.org/download (64-bit).
 2. Write it to USB (`dd` / Rufus / balenaEtcher), boot the old computer from it.
-3. Install NixOS following the official manual (partition, `nixos-install`, set a root
-   password). Any minimal install is fine — we replace its config next.
+3. Partition and install. This covers the common case: a single disk with UEFI boot.
+
+   Run `lsblk` to find the disk name (often `/dev/sda` or `/dev/nvme0n1`). The steps
+   below erase that disk, so confirm it's the right one first.
+
+   Open it in fdisk:
+
+   ```bash
+   fdisk /dev/sda
+   ```
+
+   Enter these at the prompt. The first command, `g`, deletes any existing partitions
+   and starts a fresh GPT table. Press Enter to accept each default in parentheses.
+
+   - `g` — new GPT table
+   - `n`, Enter, Enter, then `+512M` — a 512 MB boot partition
+   - `t`, `1` — set its type to EFI System
+   - `n`, Enter, Enter, Enter — a second partition filling the rest
+   - `w` — write and exit
+
+   Format and mount the two partitions, then generate the config and install. On nvme
+   disks the partitions are `${D}p1` and `${D}p2` rather than `${D}1` and `${D}2`.
+
+   ```bash
+   D=/dev/sda
+
+   mkfs.fat -F 32 -n boot ${D}1
+   mkfs.xfs -L nixos ${D}2
+
+   mount /dev/disk/by-label/nixos /mnt
+   mkdir -p /mnt/boot
+   mount /dev/disk/by-label/boot /mnt/boot
+
+   nixos-generate-config --root /mnt
+   nixos-install
+   reboot
+   ```
+
+   On a legacy-BIOS machine, use the manual's BIOS partition steps instead; the rest of
+   this guide is the same.
 4. Reboot into the new system and log in as `root`.
 
 ## 2. Copy this config onto the box
@@ -176,7 +214,7 @@ Prowlarr and at qBittorrent.
 
 ## Verification
 
-1. **Services up:** `systemctl status jellyfin sonarr radarr prowlarr qbittorrent caddy anubis-jellyfin`
+1. **Services up:** `systemctl status jellyfin sonarr radarr prowlarr qbittorrent caddy 'anubis-*'`
 2. **Public path (from phone on cellular):**
    `curl https://YOUR-HOSTNAME:8443/System/Info/Public` → returns HTTP 200 + JSON.
 3. **Friend's experience:** open the Jellyfin app, server address `YOUR-HOSTNAME:8443`, log in.
