@@ -184,8 +184,9 @@ netbird up --setup-key YOUR_NETBIRD_SETUP_KEY
 netbird status        # should show "Connected"
 ```
 
-Install the Netbird client on your own laptop/phone and log into the same account. You can
-now reach the box privately at the name Netbird assigns it.
+Install the Netbird client on your own laptop/phone and log into the same account. `netbird
+status` lists the box's Netbird IP — that IP (or the name Netbird assigns it) is the
+`<netbird-host>` used in the SSH commands below.
 
 ## 9. Set up Jellyfin
 
