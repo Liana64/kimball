@@ -1,4 +1,4 @@
-{ self, config, lib, pkgs, ... }:
+{ config, lib, pkgs, ... }:
 
 {
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
@@ -40,12 +40,12 @@
     ];
   };
 
-  # Unattended security updates from this flake. Set the flake ref to wherever
-  # the repo lives on the box (or a remote git URL).
+  # Unattended security updates from this flake (the service updates the flake
+  # inputs itself; do NOT pass the deprecated --update-input flag here).
   system.autoUpgrade = {
     enable = true;
     flake = "/etc/nixos";
-    flags = [ "--update-input" "nixpkgs" "--update-input" "nixarr" ];
+    flags = [ "--print-build-logs" ];
     dates = "04:30";
     randomizedDelaySec = "30min";
     allowReboot = true;

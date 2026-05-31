@@ -10,7 +10,6 @@
   outputs = { self, nixpkgs, nixarr, ... }: {
     nixosConfigurations.media = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
-      specialArgs = { inherit self; };
       modules = [
         nixarr.nixosModules.default
         ./hardware-configuration.nix
