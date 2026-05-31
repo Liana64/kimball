@@ -71,17 +71,37 @@ in
       hash = lib.fakeHash;
     };
     email = "you@example.com"; # TODO: ACME contact
+    # Cloudflare token (Zone.DNS) for the ACME DNS-01 challenge. File holds:
+    #   CLOUDFLARE_API_TOKEN=<token>
+    # Persistent, root-only (0600). Not in git / the Nix store.
+    environmentFile = "/var/lib/secrets/caddy-cloudflare.env";
+    # disable_redirects stops Caddy opening a port-80 redirect listener; with
+    # acme_dns the cert comes via DNS-01 so port 80 is never needed.
     globalConfig = ''
+      auto_https disable_redirects
       acme_dns cloudflare {env.CLOUDFLARE_API_TOKEN}
     '';
     virtualHosts."https://${domain}:8443".extraConfig = ''
+      # Security headers ported from the home-infra Traefik secure-headers
+      # middleware. The strict CSP and Cross-Origin-Embedder-Policy from that
+      # stack are intentionally omitted — they break Jellyfin's web client
+      # (scripts, artwork, media blobs). TLS 1.2/1.3 + strong ciphers are
+      # already Caddy's defaults, matching the Traefik TLSOption.
+      header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Content-Security-Policy "upgrade-insecure-requests;"
+        Permissions-Policy "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
+        X-Robots-Tag "noindex, nofollow, noarchive, nosnippet, notranslate, noimageindex"
+        X-Permitted-Cross-Domain-Policies "none"
+        -Server
+        -X-Powered-By
+      }
       reverse_proxy 127.0.0.1:${toString anubisPort}
     '';
   };
-  # Cloudflare token (Zone.DNS) for the ACME DNS-01 challenge. File holds:
-  #   CLOUDFLARE_API_TOKEN=<token>
-  # Persistent, root-only (0600). Not in git / the Nix store.
-  systemd.services.caddy.serviceConfig.EnvironmentFile = "/var/lib/secrets/caddy-cloudflare.env";
 
   ##########################################################################
   # Dynamic DNS: keep the A record pointed at the dynamic WAN IP.
